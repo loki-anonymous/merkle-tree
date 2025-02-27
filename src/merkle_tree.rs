@@ -14,44 +14,65 @@ pub struct MerkleTree{
 
 
 impl MerkleTree {
-    pub fn new()->Self{
-        MerkleTree{
+    pub fn new<T:Hash>(data:& [T])->Self{
+        let mut tree = MerkleTree{
             nodes:vec![vec![]]
-        }
+        };
+        tree.construct(data);
+        tree
     }
 
     pub fn construct<'a,T:Hash >(&mut self,data:&'a [T]){
         let mut level = 0;
         for val in data{
-            let hash_op = hash(&data);
-            self.nodes[level].push(hash_op);
+            self.nodes[level].push(hash(val));
         }
-        let mut top_len = self.nodes[0].len();
-        while top_len > 1 {
+        let mut peek_len = self.nodes[level].len();
+        while peek_len > 1 {
+            let mut cup = [0,0];
             self.nodes.push(vec![]);
-            let mut range = (0..level/2);
-            if level % 2 != 0{
-                range = (0..level/2 + 1);
-            }
             level += 1;
-            let mut push_idx = 0usize;
-            let mut idx = 0usize;
-            let mut prev = [0,0];
-            let (iter_part,append_part) = self.nodes.split_at_mut(level);
-            for val in iter_part[level - 1].iter(){
-                prev[idx&1] = *val;
-                if idx & 1 == 1{
-                    push_idx += 1;
-                    let h_op = hash(&prev);
-                    append_part[0].push(h_op);
+            let (iter_ref,append_ref) = self.nodes.split_at_mut(level);
+            let mut idx = 0;
+            for val in iter_ref[level - 1].iter(){
+                cup[idx&1] = *val;
+                if idx&1 == 1{
+                    append_ref[0].push(hash(&cup));
                 }
                 idx += 1;
             }
             if idx&1 == 1 {
-                prev[1] = prev[0];
-                self.nodes[level].push(hash(&prev));
+                cup[idx&1] = cup[0];
+                append_ref[0].push(hash(&cup));
             }
-            top_len = self.nodes[level].len();
+            peek_len = self.nodes[level].len();
+        }
+    }
+    pub fn get_proof(&self,mut idx: usize)->Option<Vec<u64>>{
+        if idx < self.nodes.len(){
+            return unsafe {Some(self.get_proof_unchecked(idx))} ;
+        }
+        None
+    }
+    pub unsafe fn get_proof_unchecked(&self,mut idx: usize)->Vec<u64>{
+        let mut res = Vec::new();
+        let mut level = 0;
+        for levels in self.nodes.iter(){
+            if levels.len() == 1{
+                res.push(levels[0]);
+                return res;
+            }
+            if idx&1 == 0{res.push(levels[idx + 1]);}else{res.push(levels[idx - 1])}
+            idx /=  2;
+        }
+        res
+    }
+    
+    pub fn verify_proof(&self,mut idx: usize,proof:Vec<u64>)->bool{
+        // unimplemented!()
+        match self.get_proof(idx){
+            Some(res)=>res == proof,
+            None=>false
         }
     }
 }
