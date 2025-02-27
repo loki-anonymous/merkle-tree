@@ -75,4 +75,12 @@ impl MerkleTree {
             None=>false
         }
     }
+
+    pub fn get_root(&self)->Option<u64>{
+        let last = self.nodes.last().unwrap();
+        match last.len() > 0{
+            true =>{Some(last[0])},
+            false =>{None}
+        }
+    }
 }
