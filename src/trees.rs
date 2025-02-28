@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 
 pub trait HasherFunction<const N:usize>{
-    fn hash<T:Hash>(data:&T)->[u8;N];
+    fn hash(left:&[u8;N],right:&[u8;N])->[u8;N];
 }
 pub trait ToBytes {
     fn to_bytes(&self)->&[u8];
@@ -20,7 +20,7 @@ where F:HasherFunction<N>{
 
 impl<const N:usize,F> MekleTree<N,F>
 where F:HasherFunction<N>{
-    pub fn new<T:Hash>(data:&[T],hasher_fn:F)->Self{
+    pub fn new(data:&[&[u8;N]],hasher_fn:F)->Self{
         let mut tree = MekleTree{
             nodes:vec![vec![]],
             hash_fn:hasher_fn,
@@ -29,11 +29,11 @@ where F:HasherFunction<N>{
         tree
         // todo!()
     }
-    pub fn construct<T:Hash>(&mut self,data:&[T]){
+    pub fn construct(&mut self,data:&[&[u8;N]]){
         let hash = &self.hash_fn;
         let mut level = 0;
         for val in data{
-            self.nodes[level].push(F::hash(val));
+            self.nodes[level].push(**val);
         }
         let mut peek_len = self.nodes[level].len();
         while peek_len > 1 {
@@ -45,13 +45,13 @@ where F:HasherFunction<N>{
             for val in iter_ref[level - 1].iter(){
                 cup[idx&1] = *val;
                 if idx&1 == 1{
-                    append_ref[0].push(F::hash(&cup.as_flattened()));
+                    append_ref[0].push(F::hash(&cup[0],&cup[1]));
                 }
                 idx += 1;
             }
             if idx&1 == 1 {
                 cup[idx&1] = cup[0];
-                append_ref[0].push(F::hash(&cup.as_flattened()));
+                append_ref[0].push(F::hash(&cup[0],&cup[1]));
             }
             peek_len = self.nodes[level].len();
         }

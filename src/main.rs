@@ -11,9 +11,11 @@ use trees::ToBytes;
 struct H;
 
 impl trees::HasherFunction<8> for H {
-    fn hash<T:Hash>(data: &T) -> [u8; 8] {
+    fn hash(left:&[u8;8],right:&[u8;8]) -> [u8; 8] {
         let mut hasher = DefaultHasher::new();
-        data.hash(&mut hasher);
+        let r =[*left,*right];
+        r.as_flattened().hash(&mut hasher);
+        // todo!()
         hasher.finish().to_ne_bytes()
     }
 }
@@ -25,9 +27,9 @@ impl ToBytes for str {
 }
 
 fn main() {
-    let x = &["qwertyu".as_bytes(), "qwertyui".as_bytes()]; 
+    let x = &[&[4u8;8], &[9u8;8]]; 
     let hasher = H; 
-    let tree = trees::MekleTree::new(b"qwertyuio", hasher);
+    let tree = trees::MekleTree::new(x.as_slice(), hasher);
     println!("{:?}", tree);
     
     let mut vec = vec![1, 2, 3, 4, 5];
